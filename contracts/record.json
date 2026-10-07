@@ -1,9 +1,79 @@
 {
-  "名称": "非遗影像来源与许可基础记录",
-  "必填字段": [
-    "record_id",
-    "owner_id",
-    "state"
-  ],
-  "说明": "该契约只描述现有登记能力，后续领域状态在此基础上扩展。"
+  "名称": "非遗影像来源与许可图谱契约",
+  "基线记录": {
+    "必填字段": ["record_id", "owner_id", "state"],
+    "可选字段": ["revision"],
+    "说明": "validate 命令沿用最早版本的登记契约，保持向后兼容。"
+  },
+  "素材 import": {
+    "必填字段": ["material_id", "material_type", "fingerprint"],
+    "material_type取值": [
+      "interview 原始访谈",
+      "step 手艺步骤",
+      "reference 参考文献",
+      "translation 翻译说明",
+      "clip 剪辑片段",
+      "statement 创作者声明",
+      "license 传承人授权",
+      "work 派生作品"
+    ],
+    "可选字段": ["title", "creator_id", "holder_id", "state", "metadata"],
+    "规则": [
+      "同一 fingerprint 再次导入返回 reused=true 并复用已有素材与处理链路",
+      "指纹相同但许可声明 declared_terms 不一致时生成独立复核任务"
+    ]
+  },
+  "加工 derive": {
+    "必填字段": ["parent_id", "child_id", "process"],
+    "可选字段": ["actor_id", "note"],
+    "说明": "父素材经剪辑/AI 整理/翻译等过程产出子素材，可递归追溯。"
+  },
+  "说法 claim": {
+    "必填字段": ["claim_id", "material_id", "subject", "content"],
+    "可选字段": ["source_id", "polarity"],
+    "polarity取值": ["positive 正面表述", "negative 反面表述"]
+  },
+  "说法关系 relate": {
+    "必填字段": ["from_claim_id", "to_claim_id", "relation"],
+    "relation取值": ["corroborate 互相佐证", "contradict 内容矛盾"],
+    "规则": "矛盾来源必须保留分歧；同一证据树存在未解决矛盾的作品禁止发布。"
+  },
+  "授权 license": {
+    "必填字段": ["license_id", "fingerprint", "holder_id", "creator_id", "valid_from", "territories"],
+    "可选字段": ["valid_until", "declared_terms"],
+    "规则": [
+      "授权按地区 territories 与期限 valid_from/valid_until 界定传播范围",
+      "授权随加工链向下继承，作品可用范围取各源素材有效授权的地区交集与期限交集",
+      "同指纹 declared_terms 不一致触发独立复核，创作者不能自审"
+    ]
+  },
+  "争议 open-dispute/close-dispute": {
+    "开启必填": ["dispute_id", "material_id", "opener_id"],
+    "关闭必填": ["dispute_id", "closer_id", "resolution"],
+    "规则": "创作者本人与争议发起者都不能关闭争议；未决争议期间作品禁止发布。"
+  },
+  "更正 correct": {
+    "必填字段": ["holder_id", "old_claim_id", "claim_id", "subject", "content"],
+    "规则": [
+      "仅传承人本人可更正自己的说法",
+      "未发布的依赖作品置 blocked 停止流转",
+      "已公开作品置 corrected，形成 corrections 记录并重新判断传播范围",
+      "两类作品都生成/延续复核任务"
+    ]
+  },
+  "发布 publish": {
+    "必填字段": ["work_id", "published_by", "territories"],
+    "可选字段": ["published_at", "correction_of", "note"],
+    "规则": "冻结发布当时采用的 evidence_ids（说法）与 license_ids（授权），版本不可变；发布地区必须全部落在有效授权范围内。"
+  },
+  "授权变动": {
+    "revoke": "撤回授权：找全树中采用或冻结版本引用该授权的作品，已发布下架并延续复核",
+    "sweep": "扫描到期授权置 expired 并联动受影响作品"
+  },
+  "查询": {
+    "trace <material_id>": "来自哪里、加工链、说法与矛盾、授权与地区×期限窗口、冻结版本、更正、争议、下游作品、当前必须处理的作品",
+    "pending": "全局待处理作品清单",
+    "tasks": "复核任务（默认仅 open）",
+    "availability <work_id>": "作品当前地区×期限可用性"
+  }
 }
