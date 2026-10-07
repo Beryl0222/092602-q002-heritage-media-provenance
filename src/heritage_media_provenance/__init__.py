@@ -1,4 +1,5 @@
-"""非遗影像来源与许可领域基础。"""
-from .service import Service
+"""非遗影像来源与许可领域服务。"""
+from .service import Service, ServiceError
+from .store import Store
 
-__all__ = ["Service"]
+__all__ = ["Service", "ServiceError", "Store"]

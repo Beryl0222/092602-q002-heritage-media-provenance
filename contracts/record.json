@@ -1,9 +1,66 @@
 {
-  "名称": "非遗影像来源与许可基础记录",
-  "必填字段": [
-    "record_id",
-    "owner_id",
-    "state"
+  "名称": "非遗影像来源与许可图谱契约",
+  "素材类型": [
+    "interview（原始访谈）",
+    "craft_step（手艺步骤）",
+    "reference（参考文献）",
+    "translation_note（翻译说明/译注）",
+    "clip（剪辑片段）",
+    "creator_statement（创作者声明）",
+    "authorization_doc（传承人授权凭据）",
+    "derived_work（派生作品）"
   ],
-  "说明": "该契约只描述现有登记能力，后续领域状态在此基础上扩展。"
+  "关系类型": [
+    "derives_from", "edits", "cites", "translates",
+    "annotates（译注/AI 整理）", "statement_about", "authorizes", "uses"
+  ],
+  "方向约定": "relation 边 source_id → target_id 表示 target 由 source 加工/派生而来",
+  "证据立场": ["supports（佐证共同支撑结论）", "contradicts（矛盾来源必须保留分歧）"],
+  "素材登记": {
+    "必填": ["material_id", "material_type"],
+    "可选": ["title", "fingerprint", "owner_id", "holder_id", "content_note", "license_declaration"],
+    "指纹规则": "指纹归一化（去空白、小写）；同指纹再次导入复用已有处理；指纹一致但 license_declaration 与既有授权声明不同时，生成 fingerprint_mismatch 复核任务，仅可指派给独立人员"
+  },
+  "授权": {
+    "必填": ["license_id", "holder_id", "material_id"],
+    "可选": ["territories（地区列表）", "valid_from", "valid_until", "declaration"],
+    "覆盖规则": "授权覆盖素材本身上溯全部来源，以及经传承人更正替代该素材的旧素材",
+    "状态": ["active", "withdrawn（撤回）", "expired（到期）"],
+    "变更影响": "撤回/到期后找全授权素材的全部下游作品与冻结过该许可的历史公开版本：未发布作品置 held 停止流转，已发布作品生成 rejudge_scope 任务"
+  },
+  "作品与公开版本": {
+    "作品字段": ["work_id", "creator_id", "status(draft/published/held)", "region_scope"],
+    "版本字段": ["version_id", "work_id", "evidence_material_ids（发布时传入）"],
+    "冻结内容": ["evidence_frozen（证据素材 id 集合）", "licenses_frozen（许可 id 集合）", "territories_frozen（当时有效地区）", "freeze_hash（规范化哈希）"],
+    "约束": "已被传承人更正（fact_status=superseded）的证据不能冻结进新公开版本；历史版本冻结后不被后续许可状态变化改写"
+  },
+  "事实更正": {
+    "输入": ["old_material_id", "new_material_id", "holder_id（须与新素材传承人一致）"],
+    "处置": "旧素材置 superseded 留痕；未发布依赖作品置 held 并建 fact_correction 任务；已公开作品生成 corrections 更正记录并建 rejudge_scope 任务；旧事实上未完成的复核任务延续到新事实"
+  },
+  "争议": {
+    "字段": ["dispute_id", "subject_id", "opened_by", "reason"],
+    "关闭规则": "创作者本人（素材 owner_id / 作品 creator_id）永远不能关闭自己的争议，须由独立人员处理；拒绝动作写入事件日志"
+  },
+  "复核人员与任务": {
+    "复核人员": ["reviewer_id", "identity(person/team)"],
+    "任务类型": ["fingerprint_mismatch", "fact_correction", "license_withdrawn", "license_expired", "rejudge_scope"],
+    "独立性": "fingerprint_mismatch 不得指派给素材创作者本人；identity=team 的独立团队除外",
+    "延续": "许可变更后该作品上未完成的历史复核任务保持 pending 可被找全；事实更正导致主体迁移时生成 carried_from 延续任务"
+  },
+  "溯源报告 trace": {
+    "输入": "任一片段/作品 id 与可选 as_of 日期",
+    "输出": [
+      "origin.root_material_ids（来自哪里）",
+      "processing.upstream_processing_chain / downstream_edges（经历过哪些加工、流向哪里）",
+      "availability（在哪些地区、什么期限内可用，逐条许可状态）",
+      "public_versions / corrections（冻结版本与更正记录）",
+      "supersession_chain（事实被更正的链条）",
+      "pending_review_tasks / must_handle_count（当前还必须处理的工作）"
+    ]
+  },
+  "早期基础记录": {
+    "必填": ["record_id", "owner_id", "state"],
+    "说明": "records 表与 register/find/validate 能力保持兼容。"
+  }
 }
